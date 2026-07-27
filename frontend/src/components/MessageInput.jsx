@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { ImageIcon, MicIcon, SendIcon, SmileIcon, XIcon } from "lucide-react";
 import ReplyPreview from "./ReplyPreview";
 import VoiceRecorder from "./VoiceRecorder";
+import { compressImage } from "../lib/imageUtils";
 
 // How long to wait after the last keystroke before emitting "stopTyping" (ms)
 const TYPING_TIMEOUT_MS = 1500;
@@ -76,9 +77,7 @@ function MessageInput() {
     setText("");
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -86,9 +85,13 @@ function MessageInput() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file);
+      setImagePreview(compressed);
+    } catch (err) {
+      console.error("Failed to process image:", err);
+      toast.error("Failed to process image");
+    }
   };
 
   const removeImage = () => {

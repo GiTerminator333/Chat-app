@@ -55,7 +55,10 @@ export const sendMessage = async (req, res)=>{
         
         let imageUrl;
         if(image){
-            const uploadResponse = await cloudinary.uploader.upload(image);
+            const uploadResponse = await cloudinary.uploader.upload(image, {
+                folder : "chat_images",
+                resource_type : "auto"
+            });
             imageUrl = uploadResponse.secure_url;
         }
 
@@ -98,8 +101,8 @@ export const sendMessage = async (req, res)=>{
 
         res.status(201).json(message);
     }catch(error){
-        console.log("error in sendMessage controller", error.message);
-        return res.status(500).json({message : "Internal server error"});
+        console.error("error in sendMessage controller:", error);
+        return res.status(500).json({message : error?.message || "Internal server error"});
     }
 }
 

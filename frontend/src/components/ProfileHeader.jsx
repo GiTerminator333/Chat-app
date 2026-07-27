@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { LogOutIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { getAvatarUrl } from "../lib/avatar";
+import { compressImage } from "../lib/imageUtils";
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile } = useAuthStore();
@@ -9,18 +10,17 @@ function ProfileHeader() {
 
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-
-    reader.onloadend = async () => {
-      const base64Image = reader.result;
+    try {
+      const base64Image = await compressImage(file, 800, 800, 0.85);
       setSelectedImg(base64Image);
       await updateProfile({ profilePic: base64Image });
-    };
+    } catch (error) {
+      console.error("Profile image upload failed:", error);
+    }
   };
 
   return (

@@ -70,31 +70,7 @@ ZapChat is a full-stack, real-time messaging platform built on the MERN stack (`
    # Install root, backend, and frontend dependencies
    npm run build
    ```
-
-3. **Configure Environment Variables**:
-   Create a `.env` file in the `backend/` directory:
-
-   ```env
-   PORT=3000
-   NODE_ENV=development
-   CLIENT_URL=http://localhost:5173
-   
-   MONGO_URI=your_mongodb_connection_string
-   JWT_SECRET=your_jwt_secret_key
-   
-   CLOUDINARY_CLOUD_NAME=your_cloud_name
-   CLOUDINARY_API_KEY=your_api_key
-   CLOUDINARY_API_SECRET=your_api_secret
-   
-   RESEND_API_KEY=your_resend_api_key
-   EMAIL_FROM=onboarding@resend.dev
-   EMAIL_FROM_NAME=ZapChat
-   
-   ARCJET_KEY=your_arcjet_key
-   ARCJET_ENV=development
-   ```
-
-4. **Run Development Mode**:
+3. **Run Development Mode**:
    Launch backend and frontend dev servers in separate terminals:
 
    ```bash
@@ -104,9 +80,6 @@ ZapChat is a full-stack, real-time messaging platform built on the MERN stack (`
    # Terminal 2 — Frontend (Port 5173)
    npm run dev --prefix frontend
    ```
-
-5. **Open in Browser**:
-   Navigate to `http://localhost:5173`
 
 ---
 
@@ -123,32 +96,6 @@ ZapChat is configured for single-command production builds.
    npm start
    ```
 3. Set `NODE_ENV=production` in your hosting dashboard environment variables. Express will automatically serve the built static frontend assets and handle SPA routing fallback.
-
----
-
-## 📁 Repository Structure
-
-```
-ZapChat/
-├── backend/
-│   ├── src/
-│   │   ├── controllers/   # Auth & message business logic
-│   │   ├── emails/        # Resend email templates & handlers
-│   │   ├── lib/           # DB, Socket, Cloudinary, Arcjet, ENV setup
-│   │   ├── middlewares/   # JWT auth, Arcjet & Socket security
-│   │   ├── models/        # Mongoose User & Message schemas
-│   │   ├── routes/        # Auth & Message API endpoints
-│   │   └── server.js      # App entry point (Express + Socket.IO)
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # Reusable UI (MessageInput, Bubbles, Headers)
-│   │   ├── hooks/         # Custom hooks (Keyboard sound player)
-│   │   ├── lib/           # Axios & image compression utilities
-│   │   ├── pages/         # ChatPage, LoginPage, SignUpPage
-│   │   └── store/         # Zustand Auth & Chat state management
-├── package.json           # Root orchestrator scripts
-└── README.md
-```
 
 ---
 

@@ -1,8 +1,12 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import { ImageIcon, SendIcon, XIcon } from "lucide-react";
+
+// How long to wait after the last keystroke before emitting "stopTyping" (ms)
+const TYPING_TIMEOUT_MS = 1500;
 
 function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
@@ -10,13 +14,49 @@ function MessageInput() {
   const [imagePreview, setImagePreview] = useState(null);
 
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled } = useChatStore();
+  const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
+  const { socket } = useAuthStore();
+
+  // Clean up typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
+  /**
+   * Emit "typing" event and set a debounce timer that
+   * emits "stopTyping" after TYPING_TIMEOUT_MS of inactivity.
+   */
+  const handleTypingEmit = useCallback(() => {
+    if (!socket || !selectedUser) return;
+
+    socket.emit("typing", { receiverId: selectedUser._id });
+
+    // Reset the debounce timer
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stopTyping", { receiverId: selectedUser._id });
+    }, TYPING_TIMEOUT_MS);
+  }, [socket, selectedUser]);
+
+  /** Immediately stop the typing indicator (e.g., on send) */
+  const stopTypingNow = useCallback(() => {
+    if (!socket || !selectedUser) return;
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    socket.emit("stopTyping", { receiverId: selectedUser._id });
+  }, [socket, selectedUser]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
     if (isSoundEnabled) playRandomKeyStrokeSound();
+
+    // Stop typing indicator before sending
+    stopTypingNow();
 
     sendMessage({
       text: text.trim(),
@@ -72,6 +112,7 @@ function MessageInput() {
           onChange={(e) => {
             setText(e.target.value);
             isSoundEnabled && playRandomKeyStrokeSound();
+            handleTypingEmit();
           }}
           className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
           placeholder="Type your message..."

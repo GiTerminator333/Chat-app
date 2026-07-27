@@ -56,20 +56,58 @@ export const sendMessage = async (req, res)=>{
             senderId : senderId,
             receiverId : receiverId,
             text : text,
-            image : imageUrl
+            image : imageUrl,
+            status : "sent"
         })
 
         await message.save();
 
-        const receiverSockerId = getUserSocketId(receiverId);
-        if(receiverSockerId){
-            io.to(receiverSockerId).emit("newMessage", message);
+        // If receiver is online, deliver the message via Socket.IO
+        const receiverSocketId = getUserSocketId(receiverId);
+        if(receiverSocketId){
+            // Update status to "delivered" since receiver will receive it in real-time
+            message.status = "delivered";
+            await message.save();
+
+            io.to(receiverSocketId).emit("newMessage", message);
         }
 
         res.status(201).json(message);
     }catch(error){
         console.log("error in sendMessage controller", error.message);
         return res.status(500).json({message : "Internal server error"});
+    }
+}
+
+/**
+ * Mark all messages FROM a specific sender TO the logged-in user as "read".
+ * Called when the logged-in user opens a conversation with that sender.
+ */
+export const markMessagesAsRead = async (req, res) => {
+    try{
+        const { id: senderId } = req.params;
+        const loggedInUserId = req.user._id;
+
+        // Bulk-update all unread messages from this sender to "read"
+        await Message.updateMany(
+            {
+                senderId : senderId,
+                receiverId : loggedInUserId,
+                status : { $ne : "read" }
+            },
+            { status : "read" }
+        );
+
+        // Notify the sender in real-time so their checkmarks update instantly
+        const senderSocketId = getUserSocketId(senderId);
+        if(senderSocketId){
+            io.to(senderSocketId).emit("messagesRead", { readBy: loggedInUserId.toString() });
+        }
+
+        res.status(200).json({ message : "Messages marked as read" });
+    }catch(error){
+        console.log("error in markMessagesAsRead controller", error.message);
+        return res.status(500).json({ message : "Internal server error" });
     }
 }
 

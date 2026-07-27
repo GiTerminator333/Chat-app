@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 import { ENV } from './env.js';
+import dns from 'dns';
+
+// Fix for Windows DNS SRV lookup ECONNREFUSED issue
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (e) {
+  console.log("DNS setServers warning:", e.message);
+}
+
 export const connectToDB = async()=>{
     try{
         const conn = await mongoose.connect(ENV.MONGO_URI);

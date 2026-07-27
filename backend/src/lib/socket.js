@@ -28,6 +28,23 @@ io.on("connection", (socket)=>{
     
     io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
+    // --- Typing indicator relay ---
+    // When a user starts typing, notify the receiver
+    socket.on("typing", ({ receiverId }) => {
+        const receiverSocketId = userSocketMap[receiverId];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("userTyping", { senderId: userId });
+        }
+    });
+
+    // When a user stops typing, notify the receiver
+    socket.on("stopTyping", ({ receiverId }) => {
+        const receiverSocketId = userSocketMap[receiverId];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("userStoppedTyping", { senderId: userId });
+        }
+    });
+
     socket.on("disconnect", ()=>{
         console.log("a user disconnected", socket.user.fullName);
         delete userSocketMap[userId];

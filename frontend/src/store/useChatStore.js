@@ -13,6 +13,9 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false,
   isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
 
+  // Typing indicator state — { [userId]: true } for users currently typing
+  typingUsers: {},
+
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
     set({ isSoundEnabled: !get().isSoundEnabled });
@@ -69,6 +72,7 @@ export const useChatStore = create((set, get) => ({
       text: messageData.text,
       image: messageData.image,
       createdAt: new Date().toISOString(),
+      status: "sent",
       isOptimistic: true, 
     };
     set({ messages: [...messages, optimisticMessage] });
@@ -82,12 +86,38 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  // --- Read Receipts ---
+
+  /**
+   * Mark all messages from a specific sender as "read".
+   * Called when opening a conversation to acknowledge received messages.
+   */
+  markMessagesAsRead: async (senderId) => {
+    try {
+      await axiosInstance.put(`/messages/read/${senderId}`);
+
+      // Update local message statuses immediately for a snappy UI
+      const currentMessages = get().messages;
+      const updatedMessages = currentMessages.map((msg) =>
+        msg.senderId === senderId && msg.status !== "read"
+          ? { ...msg, status: "read" }
+          : msg
+      );
+      set({ messages: updatedMessages });
+    } catch (error) {
+      console.log("Error marking messages as read:", error.message);
+    }
+  },
+
+  // --- Socket Subscriptions ---
+
   subscribeToMessages: () => {
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
 
     const socket = useAuthStore.getState().socket;
 
+    // Listen for new incoming messages
     socket.on("newMessage", (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
       if (!isMessageSentFromSelectedUser) return;
@@ -97,15 +127,54 @@ export const useChatStore = create((set, get) => ({
 
       if (isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
-
         notificationSound.currentTime = 0; 
         notificationSound.play().catch((e) => console.log("Audio play failed:", e));
       }
+    });
+
+    // Listen for read receipt confirmations (sender sees their ticks turn cyan)
+    socket.on("messagesRead", ({ readBy }) => {
+      if (readBy !== selectedUser._id) return;
+
+      const currentMessages = get().messages;
+      const updatedMessages = currentMessages.map((msg) =>
+        msg.receiverId === readBy && msg.status !== "read"
+          ? { ...msg, status: "read" }
+          : msg
+      );
+      set({ messages: updatedMessages });
     });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     socket.off("newMessage");
+    socket.off("messagesRead");
+  },
+
+  // --- Typing Indicator Socket Events ---
+
+  subscribeToTypingEvents: () => {
+    const socket = useAuthStore.getState().socket;
+
+    socket.on("userTyping", ({ senderId }) => {
+      set((state) => ({
+        typingUsers: { ...state.typingUsers, [senderId]: true }
+      }));
+    });
+
+    socket.on("userStoppedTyping", ({ senderId }) => {
+      set((state) => {
+        const updated = { ...state.typingUsers };
+        delete updated[senderId];
+        return { typingUsers: updated };
+      });
+    });
+  },
+
+  unsubscribeFromTypingEvents: () => {
+    const socket = useAuthStore.getState().socket;
+    socket.off("userTyping");
+    socket.off("userStoppedTyping");
   },
 }));

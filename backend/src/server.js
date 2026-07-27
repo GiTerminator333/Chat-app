@@ -8,7 +8,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { app, server } from "./lib/socket.js";
 
-const __dirname = path.resolve();
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
@@ -18,10 +22,10 @@ app.use("/api/messages", messgaeRoutes);
 
 
 if(ENV.NODE_ENV === "production"){
-    app.use(express.static(path.join(__dirname, "../frontend", "dist")));
-    const indexFile = path.join(__dirname, "../frontend", "dist", "index.html");
+    const frontendDist = path.join(__dirname, "../../frontend/dist");
+    app.use(express.static(frontendDist));
     app.get("*", (req, res) => {
-        res.sendFile(indexFile);
+        res.sendFile(path.join(frontendDist, "index.html"));
     });
 }
 

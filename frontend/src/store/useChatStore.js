@@ -13,8 +13,9 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false,
   isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
 
-  // Typing indicator state — { [userId]: true } for users currently typing
+  // Typing & recording indicator state — { [userId]: true } for active users
   typingUsers: {},
+  recordingUsers: {},
   // Message currently being replied to
   replyingTo: null,
 
@@ -168,6 +169,9 @@ export const useChatStore = create((set, get) => ({
       const currentMessages = get().messages;
       set({ messages: [...currentMessages, newMessage] });
 
+      // Instantly acknowledge read receipt since this chat window is active & open
+      get().markMessagesAsRead(selectedUser._id);
+
       if (isSoundEnabled) {
         const notificationSound = new Audio("/sounds/notification.mp3");
         notificationSound.currentTime = 0; 
@@ -212,7 +216,8 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("userTyping", ({ senderId }) => {
       set((state) => ({
-        typingUsers: { ...state.typingUsers, [senderId]: true }
+        typingUsers: { ...state.typingUsers, [senderId]: true },
+        recordingUsers: { ...state.recordingUsers, [senderId]: false }
       }));
     });
 
@@ -223,11 +228,28 @@ export const useChatStore = create((set, get) => ({
         return { typingUsers: updated };
       });
     });
+
+    socket.on("userRecordingVoice", ({ senderId }) => {
+      set((state) => ({
+        recordingUsers: { ...state.recordingUsers, [senderId]: true },
+        typingUsers: { ...state.typingUsers, [senderId]: false }
+      }));
+    });
+
+    socket.on("userStoppedRecordingVoice", ({ senderId }) => {
+      set((state) => {
+        const updated = { ...state.recordingUsers };
+        delete updated[senderId];
+        return { recordingUsers: updated };
+      });
+    });
   },
 
   unsubscribeFromTypingEvents: () => {
     const socket = useAuthStore.getState().socket;
     socket.off("userTyping");
     socket.off("userStoppedTyping");
+    socket.off("userRecordingVoice");
+    socket.off("userStoppedRecordingVoice");
   },
 }));

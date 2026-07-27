@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2Icon, SendIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 const BAR_COUNT = 24;
 
@@ -13,7 +14,8 @@ const BAR_COUNT = 24;
  *   onSent   — called after voice note is sent, so parent can close this UI
  */
 function VoiceRecorder({ onCancel, onSent }) {
-  const { sendMessage } = useChatStore();
+  const { sendMessage, selectedUser } = useChatStore();
+  const { socket } = useAuthStore();
 
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -62,6 +64,9 @@ function VoiceRecorder({ onCancel, onSent }) {
 
       mediaRecorder.start(); // buffer internally — one clean chunk on stop
       setIsRecording(true);
+      if (socket && selectedUser) {
+        socket.emit("recordingVoice", { receiverId: selectedUser._id });
+      }
 
       // Timer: count up every second
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -109,6 +114,9 @@ function VoiceRecorder({ onCancel, onSent }) {
     }
 
     setIsRecording(false);
+    if (socket && selectedUser) {
+      socket.emit("stopRecordingVoice", { receiverId: selectedUser._id });
+    }
   };
 
   const handleSend = () => {

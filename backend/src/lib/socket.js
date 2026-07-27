@@ -45,6 +45,21 @@ io.on("connection", (socket)=>{
         }
     });
 
+    // --- Voice Recording indicator relay ---
+    socket.on("recordingVoice", ({ receiverId }) => {
+        const receiverSocketId = userSocketMap[receiverId];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("userRecordingVoice", { senderId: userId });
+        }
+    });
+
+    socket.on("stopRecordingVoice", ({ receiverId }) => {
+        const receiverSocketId = userSocketMap[receiverId];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("userStoppedRecordingVoice", { senderId: userId });
+        }
+    });
+
     socket.on("disconnect", ()=>{
         console.log("a user disconnected", socket.user.fullName);
         delete userSocketMap[userId];

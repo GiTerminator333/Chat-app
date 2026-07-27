@@ -18,6 +18,18 @@ const messageSchema = new mongoose.Schema({
     image : {
         type : String,
     },
+    // Emoji reactions — each entry is { userId, emoji }
+    // One reaction per user (enforced in controller logic)
+    reactions : [{
+        userId : { type : mongoose.Schema.Types.ObjectId, ref : "User" },
+        emoji  : { type : String }
+    }],
+    // Quoted reply — optional reference to the parent message
+    replyTo : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "Message",
+        default : null
+    },
     // Read receipt status: "sent" → "delivered" → "read"
     status : {
         type : String,

@@ -6,7 +6,7 @@ import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
 import TypingIndicator from "./TypingIndicator";
-import MessageStatus from "./MessageStatus";
+import MessageBubble from "./MessageBubble";
 
 function ChatContainer() {
   const {
@@ -19,9 +19,11 @@ function ChatContainer() {
     markMessagesAsRead,
     subscribeToTypingEvents,
     unsubscribeFromTypingEvents,
+    clearReplyingTo,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const messageRefs = useRef({});
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id);
@@ -30,10 +32,12 @@ function ChatContainer() {
 
     // Mark all messages from this user as "read" when opening the chat
     markMessagesAsRead(selectedUser._id);
+    clearReplyingTo();
 
     return () => {
       unsubscribeFromMessages();
       unsubscribeFromTypingEvents();
+      clearReplyingTo();
     };
   }, [
     selectedUser,
@@ -43,6 +47,7 @@ function ChatContainer() {
     markMessagesAsRead,
     subscribeToTypingEvents,
     unsubscribeFromTypingEvents,
+    clearReplyingTo,
   ]);
 
   useEffect(() => {
@@ -51,43 +56,36 @@ function ChatContainer() {
     }
   }, [messages]);
 
+  const handleScrollToMessage = (messageId) => {
+    const element = messageRefs.current[messageId];
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.classList.add("ring-2", "ring-cyan-400", "bg-slate-800/60");
+      setTimeout(() => {
+        element.classList.remove("ring-2", "ring-cyan-400", "bg-slate-800/60");
+      }, 1500);
+    }
+  };
+
   return (
     <>
       <ChatHeader />
-      <div className="flex-1 px-6 overflow-y-auto py-8">
+      <div className="flex-1 px-6 overflow-y-auto py-6">
         {messages.length > 0 && !isMessagesLoading ? (
-          <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((msg) => {
-              const isSentByMe = msg.senderId === authUser._id;
-
-              return (
-                <div
-                  key={msg._id}
-                  className={`chat ${isSentByMe ? "chat-end" : "chat-start"}`}
-                >
-                  <div
-                    className={`chat-bubble relative ${
-                      isSentByMe
-                        ? "bg-cyan-600 text-white"
-                        : "bg-slate-800 text-slate-200"
-                    }`}
-                  >
-                    {msg.image && (
-                      <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
-                    )}
-                    {msg.text && <p className="mt-2">{msg.text}</p>}
-                    <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
-                      {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {/* Show read receipt ticks only for messages I sent */}
-                      {isSentByMe && <MessageStatus status={msg.status} />}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="max-w-3xl mx-auto space-y-3">
+            {messages.map((msg) => (
+              <div
+                key={msg._id}
+                ref={(el) => (messageRefs.current[msg._id] = el)}
+                className="transition-all duration-500 rounded-xl px-2 py-0.5"
+              >
+                <MessageBubble
+                  msg={msg}
+                  authUser={authUser}
+                  onScrollToMessage={handleScrollToMessage}
+                />
+              </div>
+            ))}
             <div ref={messageEndRef} />
           </div>
         ) : isMessagesLoading ? (

@@ -24,7 +24,8 @@ export const getMessagesByUserId = async (req, res)=>{
                 {senderId : loggedInUserId, receiverId : receiverId},
                 {senderId : receiverId, receiverId : loggedInUserId}
             ]
-        });
+        }).populate("replyTo", "text image senderId");
+        // ^ Populate replyTo so quoted replies include the original message content
 
         res.status(200).json(messages);
         
@@ -36,7 +37,7 @@ export const getMessagesByUserId = async (req, res)=>{
 
 export const sendMessage = async (req, res)=>{
     try{
-        const {text, image} = req.body;
+        const {text, image, replyTo} = req.body;
         const {id : receiverId} = req.params;
         const senderId = req.user._id;
 
@@ -45,6 +46,12 @@ export const sendMessage = async (req, res)=>{
 
         const receiverExists = await User.exists({_id : receiverId});
         if(!receiverExists) return res.status(400).json({message : "Receiver does not exist"});
+
+        // If replying to a message, validate the referenced message exists
+        if(replyTo){
+            const parentMessage = await Message.exists({_id : replyTo});
+            if(!parentMessage) return res.status(400).json({message : "Replied message does not exist"});
+        }
         
         let imageUrl;
         if(image){
@@ -57,10 +64,14 @@ export const sendMessage = async (req, res)=>{
             receiverId : receiverId,
             text : text,
             image : imageUrl,
+            replyTo : replyTo || null,
             status : "sent"
         })
 
         await message.save();
+
+        // Populate replyTo so the client receives the quoted content immediately
+        await message.populate("replyTo", "text image senderId");
 
         // If receiver is online, deliver the message via Socket.IO
         const receiverSocketId = getUserSocketId(receiverId);
@@ -107,6 +118,98 @@ export const markMessagesAsRead = async (req, res) => {
         res.status(200).json({ message : "Messages marked as read" });
     }catch(error){
         console.log("error in markMessagesAsRead controller", error.message);
+        return res.status(500).json({ message : "Internal server error" });
+    }
+}
+
+// --- Emoji Reactions ---
+
+/**
+ * Add or update a user's emoji reaction on a message.
+ * If the user already has a reaction, it replaces their emoji.
+ * Emits "messageReaction" socket event to both sender and receiver.
+ */
+export const addReaction = async (req, res) => {
+    try{
+        const { id: messageId } = req.params;
+        const { emoji } = req.body;
+        const userId = req.user._id;
+
+        if(!emoji) return res.status(400).json({ message : "Emoji is required" });
+
+        const message = await Message.findById(messageId);
+        if(!message) return res.status(404).json({ message : "Message not found" });
+
+        // Check if user already reacted — replace their emoji, or add new
+        const existingReactionIndex = message.reactions.findIndex(
+            (r) => r.userId.toString() === userId.toString()
+        );
+
+        if(existingReactionIndex !== -1){
+            // User already reacted — update their emoji
+            message.reactions[existingReactionIndex].emoji = emoji;
+        } else {
+            // New reaction from this user
+            message.reactions.push({ userId, emoji });
+        }
+
+        await message.save();
+
+        // Build the reaction update payload
+        const reactionPayload = {
+            messageId : message._id.toString(),
+            reactions : message.reactions
+        };
+
+        // Notify both sender and receiver in real-time
+        const senderSocketId = getUserSocketId(message.senderId.toString());
+        const receiverSocketId = getUserSocketId(message.receiverId.toString());
+
+        if(senderSocketId) io.to(senderSocketId).emit("messageReaction", reactionPayload);
+        if(receiverSocketId) io.to(receiverSocketId).emit("messageReaction", reactionPayload);
+
+        res.status(200).json(message);
+    }catch(error){
+        console.log("error in addReaction controller", error.message);
+        return res.status(500).json({ message : "Internal server error" });
+    }
+}
+
+/**
+ * Remove the logged-in user's reaction from a message.
+ * Emits "messageReaction" socket event to both sender and receiver.
+ */
+export const removeReaction = async (req, res) => {
+    try{
+        const { id: messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if(!message) return res.status(404).json({ message : "Message not found" });
+
+        // Remove this user's reaction
+        message.reactions = message.reactions.filter(
+            (r) => r.userId.toString() !== userId.toString()
+        );
+
+        await message.save();
+
+        // Build the reaction update payload
+        const reactionPayload = {
+            messageId : message._id.toString(),
+            reactions : message.reactions
+        };
+
+        // Notify both sender and receiver in real-time
+        const senderSocketId = getUserSocketId(message.senderId.toString());
+        const receiverSocketId = getUserSocketId(message.receiverId.toString());
+
+        if(senderSocketId) io.to(senderSocketId).emit("messageReaction", reactionPayload);
+        if(receiverSocketId) io.to(receiverSocketId).emit("messageReaction", reactionPayload);
+
+        res.status(200).json(message);
+    }catch(error){
+        console.log("error in removeReaction controller", error.message);
         return res.status(500).json({ message : "Internal server error" });
     }
 }

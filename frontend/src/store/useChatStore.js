@@ -15,6 +15,8 @@ export const useChatStore = create((set, get) => ({
 
   // Typing indicator state — { [userId]: true } for users currently typing
   typingUsers: {},
+  // Message currently being replied to
+  replyingTo: null,
 
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -23,6 +25,8 @@ export const useChatStore = create((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setReplyingTo: (msg) => set({ replyingTo: msg }),
+  clearReplyingTo: () => set({ replyingTo: null }),
 
   getAllContacts: async () => {
     set({ isUsersLoading: true });
@@ -60,7 +64,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser, messages, replyingTo } = get();
     const { authUser } = useAuthStore.getState();
 
     const tempId = `temp-${Date.now()}`;
@@ -71,18 +75,56 @@ export const useChatStore = create((set, get) => ({
       receiverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
+      replyTo: replyingTo || null,
       createdAt: new Date().toISOString(),
       status: "sent",
-      isOptimistic: true, 
+      isOptimistic: true,
+      reactions: [],
     };
-    set({ messages: [...messages, optimisticMessage] });
+    set({ messages: [...messages, optimisticMessage], replyingTo: null });
 
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: messages.concat(res.data) });
+      const payload = {
+        ...messageData,
+        replyTo: replyingTo ? replyingTo._id : undefined,
+      };
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, payload);
+      set((state) => ({
+        messages: state.messages.map((m) => (m._id === tempId ? res.data : m)),
+      }));
     } catch (error) {
-      set({ messages: messages });
+      set((state) => ({
+        messages: state.messages.filter((m) => m._id !== tempId),
+      }));
       toast.error(error.response?.data?.message || "Something went wrong");
+    }
+  },
+
+  // --- Emoji Reactions ---
+
+  addReaction: async (messageId, emoji) => {
+    try {
+      const res = await axiosInstance.post(`/messages/react/${messageId}`, { emoji });
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions: res.data.reactions } : msg
+        ),
+      }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add reaction");
+    }
+  },
+
+  removeReaction: async (messageId) => {
+    try {
+      const res = await axiosInstance.delete(`/messages/react/${messageId}`);
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions: res.data.reactions } : msg
+        ),
+      }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to remove reaction");
     }
   },
 
@@ -144,12 +186,22 @@ export const useChatStore = create((set, get) => ({
       );
       set({ messages: updatedMessages });
     });
+
+    // Listen for real-time message emoji reaction updates
+    socket.on("messageReaction", ({ messageId, reactions }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions } : msg
+        ),
+      }));
+    });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     socket.off("newMessage");
     socket.off("messagesRead");
+    socket.off("messageReaction");
   },
 
   // --- Typing Indicator Socket Events ---

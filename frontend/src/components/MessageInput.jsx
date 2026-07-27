@@ -12,8 +12,8 @@ const TYPING_TIMEOUT_MS = 1500;
 
 // Simple, clean preset grid of popular emojis for typing
 const QUICK_EMOJIS = [
-  "😊", "😂", "🥰", "😎", "🤔", "😢", "😡", "👍",
-  "👎", "❤️", "🔥", "🎉", "✨", "🙏", "👋", "💯"
+  "😊", "😂", "🥰", "😎", "⚡", "👍", "👎", "❤️",
+  "🔥", "🎉", "✨", "🙏", "👋", "💯", "🚀", "💬"
 ];
 
 function MessageInput() {

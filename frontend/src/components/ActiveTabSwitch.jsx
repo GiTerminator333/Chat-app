@@ -1,14 +1,19 @@
 import { useChatStore } from "../store/useChatStore";
+import { useThemeStore } from "../store/useThemeStore";
 
 function ActiveTabSwitch() {
   const { activeTab, setActiveTab } = useChatStore();
+  const { getTheme } = useThemeStore();
+  const currentTheme = getTheme();
 
   return (
     <div className="tabs tabs-boxed bg-transparent p-2 m-2">
       <button
         onClick={() => setActiveTab("chats")}
-        className={`tab ${
-          activeTab === "chats" ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400"
+        className={`tab font-medium transition-colors ${
+          activeTab === "chats"
+            ? `bg-slate-800/80 ${currentTheme.textClass}`
+            : "text-slate-400 hover:text-slate-200"
         }`}
       >
         Chats
@@ -16,8 +21,10 @@ function ActiveTabSwitch() {
 
       <button
         onClick={() => setActiveTab("contacts")}
-        className={`tab ${
-          activeTab === "contacts" ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400"
+        className={`tab font-medium transition-colors ${
+          activeTab === "contacts"
+            ? `bg-slate-800/80 ${currentTheme.textClass}`
+            : "text-slate-400 hover:text-slate-200"
         }`}
       >
         Contacts

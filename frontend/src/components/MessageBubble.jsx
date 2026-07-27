@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { ReplyIcon, SmileIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useThemeStore } from "../store/useThemeStore";
 import MessageStatus from "./MessageStatus";
 import ReplyPreview from "./ReplyPreview";
 import VoicePlayer from "./VoicePlayer";
 
-const PRESET_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const PRESET_EMOJIS = ["👍", "❤️", "😂", "⚡", "🔥", "✨"];
 
 function MessageBubble({ msg, authUser, onScrollToMessage }) {
   const { setReplyingTo, addReaction, removeReaction } = useChatStore();
+  const { getTheme } = useThemeStore();
+  const currentTheme = getTheme();
   const [showPicker, setShowPicker] = useState(false);
 
   const myId = authUser?._id || authUser?.userId || authUser?.id;
@@ -62,7 +65,7 @@ function MessageBubble({ msg, authUser, onScrollToMessage }) {
       {/* Main Message Bubble */}
       <div
         className={`chat-bubble relative overflow-visible flex flex-col shadow-md ${
-          isSentByMe ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-200"
+          isSentByMe ? (currentTheme.bubbleClass || "bg-cyan-600 text-white") : "bg-slate-800 text-slate-200"
         }`}
       >
         {/* Floating actions menu (Reply + Emoji buttons) directly next to bubble on hover */}

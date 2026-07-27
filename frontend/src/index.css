@@ -86,3 +86,21 @@
 .animate-pop {
   animation: reaction-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
+
+/* --- Voice Message Animations --- */
+
+/* Live recording bars — each bar gets a different delay via inline style */
+@keyframes voice-bar {
+  0%, 100% { transform: scaleY(0.2); }
+  50%       { transform: scaleY(1); }
+}
+
+/* Red pulsing dot shown while recording */
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.voice-recording-dot {
+  animation: voice-pulse 1s ease-in-out infinite;
+}

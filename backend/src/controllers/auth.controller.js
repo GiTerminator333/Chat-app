@@ -28,17 +28,22 @@ export const signup = async (req, res)=>{
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        const defaultProfilePic = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0D8ABC&color=fff&size=256&bold=true`;
+
         const newUser = new User({
             fullName : fullName,
             email : email,
-            password : hashedPassword
+            password : hashedPassword,
+            profilePic : defaultProfilePic
         });
 
         if(newUser){
             const savedUser = await newUser.save();
             generateToken(savedUser._id, res);
             res.status(201).json({
+                _id : savedUser._id,
                 id : savedUser._id,
+                userId : savedUser._id,
                 fullName : savedUser.fullName,
                 email : savedUser.email,
                 profilePic : savedUser.profilePic
@@ -78,6 +83,8 @@ export const login = async (req, res)=>{
 
         generateToken(user._id, res);
         res.status(200).json({
+            _id : user._id,
+            id : user._id,
             userId : user._id,
             fullName : user.fullName,
             email : user.email,

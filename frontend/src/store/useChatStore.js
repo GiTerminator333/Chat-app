@@ -75,6 +75,7 @@ export const useChatStore = create((set, get) => ({
       receiverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
+      voice: messageData.voice,
       replyTo: replyingTo || null,
       createdAt: new Date().toISOString(),
       status: "sent",

@@ -2,6 +2,7 @@ import { XIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { getAvatarUrl } from "../lib/avatar";
 
 function ChatHeader() {
   const { selectedUser, setSelectedUser, typingUsers } = useChatStore();
@@ -33,7 +34,7 @@ function ChatHeader() {
       <div className="flex items-center space-x-3">
         <div className={`avatar ${isOnline ? "online" : "offline"}`}>
           <div className="w-12 rounded-full">
-            <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+            <img src={getAvatarUrl(selectedUser.profilePic, selectedUser.fullName)} alt={selectedUser.fullName} />
           </div>
         </div>
 

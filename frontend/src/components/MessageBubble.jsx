@@ -3,6 +3,7 @@ import { ReplyIcon, SmileIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import MessageStatus from "./MessageStatus";
 import ReplyPreview from "./ReplyPreview";
+import VoicePlayer from "./VoicePlayer";
 
 const PRESET_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
@@ -10,17 +11,19 @@ function MessageBubble({ msg, authUser, onScrollToMessage }) {
   const { setReplyingTo, addReaction, removeReaction } = useChatStore();
   const [showPicker, setShowPicker] = useState(false);
 
-  const isSentByMe = msg.senderId === authUser._id;
+  const myId = authUser?._id || authUser?.userId || authUser?.id;
+  const senderId = typeof msg.senderId === "object" ? msg.senderId?._id || msg.senderId?.id : msg.senderId;
+  const isSentByMe = String(senderId) === String(myId);
   const reactions = msg.reactions || [];
 
   // Group reactions by emoji to show count and whether I reacted
   const groupedReactions = reactions.reduce((acc, r) => {
-    const rUserId = typeof r.userId === "object" ? r.userId._id : r.userId;
+    const rUserId = typeof r.userId === "object" ? r.userId._id || r.userId.id : r.userId;
     if (!acc[r.emoji]) {
       acc[r.emoji] = { count: 0, iReacted: false };
     }
     acc[r.emoji].count += 1;
-    if (rUserId === authUser._id) {
+    if (String(rUserId) === String(myId)) {
       acc[r.emoji].iReacted = true;
     }
     return acc;
@@ -29,8 +32,8 @@ function MessageBubble({ msg, authUser, onScrollToMessage }) {
   const handleEmojiClick = (emoji) => {
     // Check if I already reacted with this emoji
     const myReaction = reactions.find((r) => {
-      const rUserId = typeof r.userId === "object" ? r.userId._id : r.userId;
-      return rUserId === authUser._id && r.emoji === emoji;
+      const rUserId = typeof r.userId === "object" ? r.userId._id || r.userId.id : r.userId;
+      return String(rUserId) === String(myId) && r.emoji === emoji;
     });
 
     if (myReaction) {
@@ -130,7 +133,15 @@ function MessageBubble({ msg, authUser, onScrollToMessage }) {
             className="rounded-lg max-h-60 object-cover mt-1 mb-1 border border-slate-700/30"
           />
         )}
-        {msg.text && <p className="text-sm md:text-base leading-relaxed break-words">{msg.text}</p>}
+        {/* Voice message — renders waveform player */}
+        {msg.voice && (
+          <VoicePlayer
+            audioUrl={msg.voice}
+            msgId={msg._id}
+            isSentByMe={isSentByMe}
+          />
+        )}
+        {msg.text && !msg.voice && <p className="text-sm md:text-base leading-relaxed break-words">{msg.text}</p>}
 
         <div className="text-[10px] mt-1 opacity-75 flex items-center justify-end gap-1 self-end">
           <span>

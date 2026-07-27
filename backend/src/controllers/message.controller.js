@@ -37,11 +37,11 @@ export const getMessagesByUserId = async (req, res)=>{
 
 export const sendMessage = async (req, res)=>{
     try{
-        const {text, image, replyTo} = req.body;
+        const {text, image, voice, replyTo} = req.body;
         const {id : receiverId} = req.params;
         const senderId = req.user._id;
 
-        if(!image && !text) return res.status(400).json({message : "Message is empty"});
+        if(!image && !text && !voice) return res.status(400).json({message : "Message is empty"});
         if(senderId.toString() === receiverId.toString()) return res.status(400).json({message : "You cannot send message to yourself"});
 
         const receiverExists = await User.exists({_id : receiverId});
@@ -59,11 +59,24 @@ export const sendMessage = async (req, res)=>{
             imageUrl = uploadResponse.secure_url;
         }
 
+        // Upload voice note to Cloudinary with resource_type "raw" so it
+        // is stored as-is without any transcoding (avoids distorted playback)
+        let voiceUrl;
+        if(voice){
+            const uploadResponse = await cloudinary.uploader.upload(voice, {
+                resource_type : "raw",
+                folder : "voice_notes",
+                format : "webm"
+            });
+            voiceUrl = uploadResponse.secure_url;
+        }
+
         const message = new Message({
             senderId : senderId,
             receiverId : receiverId,
             text : text,
             image : imageUrl,
+            voice : voiceUrl,
             replyTo : replyTo || null,
             status : "sent"
         })

@@ -18,6 +18,10 @@ const messageSchema = new mongoose.Schema({
     image : {
         type : String,
     },
+    // Cloudinary URL for voice note audio (.webm)
+    voice : {
+        type : String,
+    },
     // Emoji reactions — each entry is { userId, emoji }
     // One reaction per user (enforced in controller logic)
     reactions : [{

@@ -1,5 +1,5 @@
 {
-  "name": "chatingapplication",
+  "name": "zapchat",
   "version": "1.0.0",
   "main": "index.js",
   "engines": {
@@ -11,15 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GiTerminator333/Chat-app.git"
+    "url": "git+https://github.com/GiTerminator333/ZapChat.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/GiTerminator333/Chat-app/issues"
+    "url": "https://github.com/GiTerminator333/ZapChat/issues"
   },
-  "homepage": "https://github.com/GiTerminator333/Chat-app#readme",
+  "homepage": "https://github.com/GiTerminator333/ZapChat#readme",
   "description": "",
   "dependencies": {
     "cloudinary": "^2.5.1"

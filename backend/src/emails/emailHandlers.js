@@ -4,13 +4,13 @@ import { ENV } from '../lib/env.js';
 
 const resend = new Resend(ENV.RESEND_API_KEY);
 // const from = `${ENV.EMAIL_FROM} <${ENV.EMAIL_FROM_NAME}>`;
-const from = "Chatify <onboarding@resend.dev>";
+const from = "ZapChat <onboarding@resend.dev>";
 
 export const sendWelcomeEmail = async (email, name, clientURL) => {
  const {data, error} = await resend.emails.send({
     from ,
     to : email, 
-    subject : "Welcome to Chatify",
+    subject : "Welcome to ZapChat",
     html : createWelcomeEmailTemplate(name, clientURL)
  });
 
